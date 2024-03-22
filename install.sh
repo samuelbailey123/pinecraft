@@ -9,6 +9,12 @@ fi
 # Install debs script
 ./debs.sh
 
+# Check if the last command (./debs.sh) succeeded
+if [[ $? -ne 0 ]]; then
+  echo "Error: Failed to run debs.sh" >&2
+  exit 1
+fi
+
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Get the LAN IP address
@@ -38,24 +44,6 @@ function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4
 
 # Place the current folder in a variable to use as a base source folder
 base=$(pwd)
-
-dialog --title "Pinecraft Installer $pcver" \
---msgbox "
-
-       Play on our high-performance
-             Minecraft servers!
-
-       https://patreon.com/Pinecraft
-
-" 12 48
-
-dialog --title "Pinecraft Installer $pcver" \
---msgbox "
- Pinecraft: The Minecraft Server Installer
-      For Raspberry Pi and Other SBCs
-
-         Installer Version: $pcver
-" 16 48
 
 mcver="1.20.4"
 
@@ -101,7 +89,6 @@ do
    echo
    exit 1 ;;
   esac
-
 done
 
 instdir="/home/$user/minecraft/"
@@ -282,9 +269,9 @@ mem=$(( (($memtotal - $memvariance) / 1024) - 518)) # Amount of memory in MB
 memreservation=$((($memavail * 20/100) / 1024)) # Reserve memory for system (Failure to do this will cause "Error occurred during initialization of VM")
 gamemem=$(($mem - $memreservation)) # Calculate how much memory we can give to the game server (in MB)
 gamememMIN=$((($mem * 80/100) - 1024)) # Figure a MINIMUM amount of memory to allocate
-# Seriously, if you have 100 GB RAM, we don't need more than 12 of it
-if (( $gamemem > 12000 )); then
-    gamemem=12288
+# Seriously, if you have 100 GB RAM, we don't need more than 20 of it
+if (( $gamemem > 20000 )); then
+    gamemem=20288
     gamememMIN=1500
 fi
 oc_volt=0
@@ -443,14 +430,12 @@ if [[ $jarname != "" ]]; then
 elif [[ $script != "" ]]; then
   wget $script -O minecraft.sh > /dev/null 2>&1
 else
-
   # This should never happen. No URL or Script for selection
   echo
   echo
   echo "Died."
   echo
   exit 0
-
 fi
 
 dialog --infobox "Installing ${flavor}..." 3 34 ;
@@ -734,33 +719,44 @@ chown -R $user:$user $instdir
 # Install cronjob to auto-start server on boot
 ###############################################
 
-# Dump current crontab to tmp file, empty if doesn't exist
-  crontab -u $user -l > /tmp/cron.tmp 2>/dev/null
+# Set the cron tmp file path
+cron_tmp_file="/tmp/cron.tmp"
 
-  if [[ "$cron" == "1" ]]; then
-    # Remove previous entry (in case it's an old version)
-    /bin/sed -i~ "\~${instdir}server~d" /tmp/cron.tmp
-    # Add server to auto-load at boot if doesn't already exist in crontab
-    if ! grep -q "minecraft/server" /tmp/cron.tmp; then
-      dialog --infobox "Enabling auto-run..." 3 34 ; sleep 1
-      printf "\n@reboot /usr/bin/screen -dmS Pinecraft ${instdir}server > /dev/null 2>&1\n" >> /tmp/cron.tmp
-      cronupdate=1
-    fi
-  else
-    # Just in case it was previously enabled, disable it
-    # as this user requested not to auto-run
-    /bin/sed -i~ "\~${instdir}server~d" /tmp/cron.tmp
-    cronupdate=1
+# Dump current crontab to tmp file, if the crontab doesn't exist it will be empty
+crontab -u "$user" -l > "$cron_tmp_file" 2> /dev/null
+
+# Flag to check whether the crontab needs to be updated
+cron_needs_updating=false
+
+if [[ "$cron" == "1" ]]; then
+  # Remove any existing Pinecraft server-related cron jobs
+  if grep -q "${instdir}server" "$cron_tmp_file"; then
+    /bin/sed -i~ "\~${instdir}server~d" "$cron_tmp_file"
+    cron_needs_updating=true
   fi
 
-  # Import revised crontab
-  if [[ "$cronupdate" == "1" ]]
-  then
-    crontab -u $user /tmp/cron.tmp
+  # Add server to auto-load at boot if it doesn't already exist in crontab
+  if ! grep -q "minecraft/server" "$cron_tmp_file"; then
+    dialog --infobox "Enabling auto-run..." 3 34
+    sleep 1
+    echo "@reboot /usr/bin/screen -dmS Pinecraft ${instdir}server > /dev/null 2>&1" >> "$cron_tmp_file"
+    cron_needs_updating=true
   fi
+else
+  # Remove the Pinecraft server-related cron job if it exists because auto-run is not requested
+  if grep -q "${instdir}server" "$cron_tmp_file"; then
+    /bin/sed -i~ "\~${instdir}server~d" "$cron_tmp_file"
+    cron_needs_updating=true
+  fi
+fi
 
-  # Remove temp file
-  rm /tmp/cron.tmp
+# Import revised crontab if any changes have been made
+if [[ "$cron_needs_updating" == true ]]; then
+  crontab -u "$user" "$cron_tmp_file"
+fi
+
+# Remove the temporary cron file
+rm -f "$cron_tmp_file"
 
 ###############################################
 # /Install cronjob to auto-start server on boot
@@ -777,28 +773,44 @@ chown -R $user:$user $instdir
 # /Run the server now
 ###############################################
 
-# Forge is a bit funny because it doesn't create server.properties file during initialization, so that file is created from assets.
-# However, upon initialization, and 'mods' folder is created, so we will use that to identify if initialization was successful.
+# Check if flavor is Forge and mods directory exists to determine initialization success
 if [[ $flavor == "Forge" ]]; then
-  if [[ ! -d ${instdir}mods ]]; then
-    # mods folder not found, so initialization failed. Remove the server.properties asset file so we don't lie about success
-    rm ${instdir}server.properties
+  mods_dir="${instdir}mods"
+  server_props="${instdir}server.properties"
+
+  if [[ ! -d $mods_dir ]]; then
+    # Initialization failed since 'mods' folder was not found. Take corrective measures.
+    if [[ -e $server_props ]]; then
+      # Remove the server.properties file to avoid misrepresenting success
+      rm "$server_props" || { echo "Error: Failed to remove $server_props"; exit 1; }
+    fi
+
+    # Display a warning dialog to inform about initialization issues
+    dialog --title "Warning" \
+      --msgbox "\nForge installation detected, but is not initializing correctly. Modifications may be required for proper functionality." 9 50
+  else
+    # Initialization was successful. Display success message.
+    dialog --title "Success" \
+      --msgbox "\nForge Minecraft server installed and initialized successfully." 8 50
+  fi
+else
+  # Handle the installation of other flavors and check for existence of server.properties file
+  if [[ -e $server_props ]]; then
+    # Confirm success of installation for flavors other than Forge
+    dialog --title "Success" \
+      --msgbox "\n$flavor Minecraft server installed successfully." 8 50
+  else
+    # Warn about potential issues for flavors other than Forge
+    dialog --title "Warning" \
+      --msgbox "\n$flavor Minecraft server appears to have installed, but is not initializing correctly. It is unlikely to work until this is resolved." 9 50
   fi
 fi
 
-if [[ -e ${instdir}server.properties ]]; then
-  dialog --title "Success" \
-      --msgbox "\n$flavor Minecraft server installed successfully." 8 50
-else
-  dialog --title "Warning" \
-      --msgbox "\n$flavor appears to have installed, but is not initializing correctly. It is unlikely to work until this is resolved." 9 50
-fi
-
+# Clear the terminal and present final information
 clear
-  echo
-  echo "Installation complete."
-  echo
-  echo "Minecraft server is now running on $ip"
-  echo
-  echo "Remember: World generation can take a few minutes. Be patient."
-  echo
+echo "Installation complete."
+echo
+echo "Minecraft server is now running on $ip."
+echo
+echo "Remember: World generation can take a few minutes. Be patient."
+echo

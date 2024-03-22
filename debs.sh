@@ -90,3 +90,21 @@ git config --global --unset core.autocrlf || true
 
 # Final message
 dialog --title "Success" --msgbox "All required software is installed and configured." 6 50
+
+dialog --title "Pinecraft Installer $pcver" \
+--msgbox "
+
+       Play on our high-performance
+             Minecraft servers!
+
+       https://patreon.com/Pinecraft
+
+" 12 48
+
+dialog --title "Pinecraft Installer $pcver" \
+--msgbox "
+ Pinecraft: The Minecraft Server Installer
+      For Raspberry Pi and Other SBCs
+
+         Installer Version: $pcver
+" 16 48
