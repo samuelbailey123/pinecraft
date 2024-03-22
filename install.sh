@@ -109,49 +109,43 @@ instdir="/home/$user/minecraft/"
 upgrade=0
 replace=0
 if [[ -e /home/$user ]]; then
-  if [[ -e ${instdir} ]]; then
-    if [[ ! -e ${instdir}cat5tv.ver ]]; then
-      dialog --title "Error"\
-        --msgbox "\n${instdir} already exists, but is either not created by Pinecraft Installer or is from a failed installation.\n\nPlease move or remove the folder and try again." 12 50
-      clear
-      exit 0
-    else
+  minecraft_dir="/home/$user/minecraft"
+  if [[ -e ${minecraft_dir} ]]; then
+    # The directory /home/$user/minecraft exists, so we give the user
+    # the option to upgrade or replace their current installation.
 
-      exec 3>&1
-      result=$(dialog --title "Pinecraft Installer $pcver" \
-         --menu "Pinecraft is already installed:" 9 40 4 \
-         "U"       "Upgrade Software (Keep World)" \
-         "R"       "Remove Previous and Reinstall" \
-        2>&1 1>&3);
+    exec 3>&1
+    result=$(dialog --title "Pinecraft Installer $pcver" \
+       --menu "Pinecraft is already installed:" 9 40 4 \
+       "U"       "Upgrade Software (Keep World)" \
+       "R"       "Remove Previous and Reinstall" \
+      2>&1 1>&3);
 
-      if [[ $? == 0 ]]; then
-        case $result in
-          U)
-            upgrade=1
-            ;;
-          R)
-            dialog --title "Confirmation"  --yesno "\nThis will remove your entire previous installation, including your world files.\n\nContinue?" 12 50
-            case $? in
-              1)
-              echo
-              echo
-              echo "Aborted."
-              echo
-              exit 1 ;;
-            esac
-            replace=1
-            ;;
+    if [[ $? == 0 ]]; then
+      case $result in
+        U)
+          upgrade=1
+          ;;
+        R)
+          dialog --title "Confirmation"  --yesno "\nThis will remove your entire previous installation, including your world files.\n\nContinue?" 12 50
+          case $? in
+            1)
+            echo
+            echo
+            echo "Aborted."
+            echo
+            exit 1 ;;
           esac
-        else
-          echo
-          echo
-          echo "Aborted."
-          echo
-          exit 1
-        fi
-
-    fi
-  fi
+          replace=1
+          ;;
+        esac
+      else
+        echo
+        echo
+        echo "Aborted."
+        echo
+        exit 1
+      fi
 else
   echo "Aborting: $user does not have a homedir."
   exit 1

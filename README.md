@@ -1,14 +1,8 @@
-![Pinecraft](assets/pinecraft-logo.png?raw=true)
-
-[![Discord](https://img.shields.io/discord/495592877728989194?logo=discord)](https://discord.gg/dKz5RYc) [![Youtube](https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://www.youtube.com/LinuxTechShow) [![Twitter URL](https://img.shields.io/twitter/follow/category5tv?style=flat-square&logo=twitter)](https://twitter.com/category5tv)
-
 ## Minecraft Java Server Installer for Raspberry Pi, PINE64 and Other SBCs.
 
 This installer simplifies the installation and setup of a Minecraft Java Server.
 
 If you have already installed this, running it again will allow you to upgrade.
-
-[![Support Me on Patreon](https://cdn.zecheriah.com/img/patreon_button.png)](https://patreon.com/pinecraft)
 
 ## About Pinecraft Installer
 
