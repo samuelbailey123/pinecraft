@@ -6,6 +6,9 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# Install debs script
+./debs.sh
+
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Get the LAN IP address
@@ -33,30 +36,8 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # Version comparison which allows comparing 1.16.5 to 1.14.0 (for example)
 function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
 
-# Prevent running multiple apt updates
-updated=0
-
 # Place the current folder in a variable to use as a base source folder
 base=$(pwd)
-
-# dialog allows me to create a pretty installer
-# It is a required dependency since Pinecraft 1.1
-dialog=$(which dialog)
-if [[ $dialog == "" ]]; then
-  printf "Installing dialog... "
-  if [[ $updated == 0 ]]; then
-    apt-get update > /dev/null 2>&1
-    updated=1
-  fi
-  apt-get -y install dialog > /dev/null 2>&1
-  dialog=$(which dialog)
-  if [[ $dialog == "" ]]; then
-    echo "Failed. Aborting. Install dialog first."
-    exit 0
-  else
-    echo "Success."
-  fi
-fi
 
 dialog --title "Pinecraft Installer $pcver" \
 --msgbox "
@@ -75,139 +56,6 @@ dialog --title "Pinecraft Installer $pcver" \
 
          Installer Version: $pcver
 " 16 48
-
-dialog --infobox "Checking dependencies..." 3 34 ; sleep 2
-
-javaminver=8; # The minimum version of Java for Minecraft Server to run
-javamaxver=17; # The current max version available in known repositories that Minecraft Server can run on.
-
-if [[ $updated == 0 ]]; then
-  dialog --infobox "Updating repositories..." 3 34 ;
-  apt-get update > /dev/null 2>&1
-  updated=1
-fi
-
-if type -p java > /dev/null; then
-  _java=java
-elif [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
-    _java="$JAVA_HOME/bin/java"
-fi
-
-vercount=javamaxver
-(( ++vercount ))
-while (( --vercount >= $javaminver )); do
-  javaver=0
-  if [[ "$_java" ]]; then
-    javaver=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
-  fi
-
-  ver=0
-  for i in $(echo $javaver | tr "." "\n")
-  do
-    if [[ $ver == 0 ]]; then
-      ver=$i
-    else
-      subver=$i
-      break
-    fi
-  done
-
-  result=$(dpkg-query -W --showformat='${Status}\n' openjdk-${vercount}-jre-headless | grep "install ok installed")
-  if [ ! "$result" = "" ]; then
-    break
-  fi
-
-  if (( $ver < $javamaxver )); then
-    dialog --infobox "Trying to install JRE ${vercount}..." 3 38 ;
-    apt-get -y install openjdk-${vercount}-jre-headless > /dev/null 2>&1
-  fi
-
-  result=$(dpkg-query -W --showformat='${Status}\n' openjdk-${vercount}-jre-headless | grep "install ok installed")
-  if [ ! "$result" = "" ]; then
-    break
-  fi
-
-done
-
-# Java installed?
-if type -p java > /dev/null; then
-  _java=java
-elif [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
-    _java="$JAVA_HOME/bin/java"
-else
-  dialog --title "Error" \
-    --msgbox "\nJava installation failed. Please install the latest JRE first and try again." 8 50
-  echo
-  echo
-  echo "Failed."
-  echo
-  exit 0
-fi
-
-javaver=0
-if [[ "$_java" ]]; then
-  javaver=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
-fi
-
-ver=0
-for i in $(echo $javaver | tr "." "\n")
-do
-  if [[ $ver == 0 ]]; then
-    ver=$i
-  else
-    subver=$i
-    break
-  fi
-done
-
-# minimum version of Java supported by Minecraft Server
-if [[ $ver > 8 ]] || [[ $ver == 1 ]] && [[ $subver > 8 ]]; then
-  dialog --title "Error" \
-      --msgbox "\n`which java` is version ${javaver}. You'll need a newer version of JRE." 8 50
-  echo
-  echo
-  echo "Failed."
-  echo
-  exit 0
-fi
-
-if [ $(dpkg-query -W -f='${Status}' git 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-  dialog --infobox "Installing git..." 3 34 ;
-  if [[ $updated == 0 ]]; then
-    apt-get update > /dev/null 2>&1
-    updated=1
-  fi
-  apt-get -y install git > /dev/null 2>&1
-fi
-git config --global --unset core.autocrlf
-
-if [ $(dpkg-query -W -f='${Status}' screen 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-  dialog --infobox "Installing screen..." 3 34 ;
-  if [[ $updated == 0 ]]; then
-    apt-get update > /dev/null 2>&1
-    updated=1
-  fi
-  apt-get -y install screen > /dev/null 2>&1
-fi
-
-if [ $(dpkg-query -W -f='${Status}' wget 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-  dialog --infobox "Installing wget..." 3 34 ;
-  if [[ $updated == 0 ]]; then
-    apt-get update > /dev/null 2>&1
-    updated=1
-  fi
-  apt-get -y install wget > /dev/null 2>&1
-fi
-
-# crontab isn't included on Radxa ROCK 3A ... add it.
-if [ $(dpkg-query -W -f='${Status}' cron 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-  dialog --infobox "Installing cron..." 3 34 ;
-  if [[ $updated == 0 ]]; then
-    apt-get update > /dev/null 2>&1
-    updated=1
-  fi
-  apt-get -y install cron > /dev/null 2>&1
-fi
 
 mcver="1.20.4"
 
@@ -587,37 +435,6 @@ if [[ $upgrade == 1 ]]; then
   rm -rf src
 fi
 mkdir src && cd src
-
-# Install the tools needed to compile C code
-if [[ $compiler == 1 ]]; then
-
-  if [ $(dpkg-query -W -f='${Status}' gcc 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    dialog --infobox "Installing gcc..." 3 34 ;
-    if [[ $updated == 0 ]]; then
-      apt-get update > /dev/null 2>&1
-      updated=1
-    fi
-    apt-get -y install gcc > /dev/null 2>&1
-  fi
-
-  if [ $(dpkg-query -W -f='${Status}' g++ 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    dialog --infobox "Installing g++..." 3 34 ;
-    if [[ $updated == 0 ]]; then
-      apt-get update > /dev/null 2>&1
-      updated=1
-    fi
-    apt-get -y install g++ > /dev/null 2>&1
-  fi
-
-  if [ $(dpkg-query -W -f='${Status}' cmake 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    dialog --infobox "Installing cmake..." 3 34 ;
-    if [[ $updated == 0 ]]; then
-      apt-get update > /dev/null 2>&1
-      updated=1
-    fi
-    apt-get -y install cmake > /dev/null 2>&1
-  fi
-fi
 
 # The server version requires the supplemental download of the vanilla server
 if [[ "$dlvanilla" = "1" ]]; then
