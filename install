@@ -22,7 +22,6 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
     ip="127.0.0.1"
   fi
 
-
 # Determine where the config.txt file is
   # Generic
   configfile=/boot/config.txt
@@ -30,7 +29,6 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   if [[ -e /boot/firmware/config.txt ]]; then
     configfile=/boot/firmware/config.txt
   fi
-
 
 # Version comparison which allows comparing 1.16.5 to 1.14.0 (for example)
 function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
@@ -192,10 +190,6 @@ if [ $(dpkg-query -W -f='${Status}' screen 2>/dev/null | grep -c "ok installed")
   apt-get -y install screen > /dev/null 2>&1
 fi
 
-# wget is used to download each server installer
-# I don't distribute the installers with Pinecraft directly since
-# Minecraft itself is not open source.
-# The Radxa ROCK 3A does not have wget pre-installed, so I'll install it if it doesn't exist.
 if [ $(dpkg-query -W -f='${Status}' wget 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
   dialog --infobox "Installing wget..." 3 34 ;
   if [[ $updated == 0 ]]; then
@@ -215,12 +209,7 @@ if [ $(dpkg-query -W -f='${Status}' cron 2>/dev/null | grep -c "ok installed") -
   apt-get -y install cron > /dev/null 2>&1
 fi
 
-mcver="1.16.5"
-if (( $ver >= 17 )); then # Java version 17+ allows 1.18.x
-  mcver="1.20.4"
-elif (( $ver >= 16 )); then # Java version 16+ allows 1.17.x
-  mcver="1.17.1"
-fi
+mcver="1.20.4"
 
 # Username may be provided on CLI as in 1.0
 user=$1
@@ -327,19 +316,6 @@ if [[ $upgrade == 0 ]]; then
          --menu "Choose your game seed:" 20 50 10 \
          "A"       "Random (Default, ${mcver})" \
          "B"       "Custom (${mcver})" \
-         "C"       "Category5 TV RPi Server (1.16.5)" \
-         "D"       "Jeff's Tutorial World (1.16.5)" \
-         "E"       "Minecraft Title Screen (1.9.4)" \
-         "F"       "Slime Farm (1.16.5)" \
-         "G"       "Obsidian Farm (1.9.4)" \
-         "H"       "Woodland Mansion (1.12.2)" \
-         "I"       "Triple Island Ocean Monument (1.14.4)" \
-         "J"       "Spruce Village and Coral Reef (1.14.4)" \
-         "K"       "Shipwreck Village (1.14.4)" \
-         "L"       "Underwater Temple (1.9.4)" \
-         "M"       "Diamond Paradise (1.9.4)" \
-         "N"       "All Biome World (1.12.2)" \
-         "O"       "Paradise Valley (1.16.5)" \
        2>&1 1>&3);
 
   if [[ $? == 0 ]]; then
@@ -352,59 +328,6 @@ if [[ $upgrade == 0 ]]; then
       seed="custom"
       mcverANY=1
       ;;
-    C)
-      seed="-4385290424787160722"
-      mcver="1.16.5"
-      ;;
-    D)
-      seed="6421417242871949536"
-      mcver="1.16.5"
-      ;;
-    E)
-      seed="2151901553968352745"
-      mcver="1.9.4" # Was actually part of 1.7.3 but that was a beta client, and Spigot only goes back to 1.9. Probably not usable?
-      ;;
-    F)
-      seed="7000"
-      mcver="1.16.5"
-      ;;
-    G)
-      seed="-8880302588844065321"
-      mcver="1.9.4" # Originally on 1.9
-      ;;
-    H)
-      seed="throwlow"
-      mcver="1.12.2" # Originally on 1.12
-      ;;
-    I)
-      seed="6073041046072376055"
-      mcver="1.14.4" # OP didn't say what version, so I have to guess
-      ;;
-    J)
-      seed="673900667"
-      mcver="1.14.4"
-      ;;
-    K)
-      seed="-613756530319979507"
-      mcver="1.14.4"
-      ;;
-    L)
-      seed="-5181140359215069925"
-      mcver="1.9.4" # Was on 1.8 but Spigot only goes back to 1.9
-      ;;
-    M)
-      seed="1785852800490497919"
-      mcver="1.9.4" # Was on 1.8 but Spigot only goes back to 1.9
-      ;;
-    N)
-      seed="1083719637794"
-      mcver="1.12.2"
-      ;;
-    O)
-      seed="4725084288293652062"
-      mcver="1.16.5"
-      ;;
-
     esac
   else
     echo
@@ -423,31 +346,8 @@ if [[ $upgrade == 0 ]]; then
 fi
 
 # https://www.minecraft.net/en-us/download/server
-if [[ $mcver == "1.20.2" ]]; then
-  vanilla="https://piston-data.mojang.com/v1/objects/5b868151bd02b41319f54c8d4061b8cae84e665c/server.jar"
-elif [[ $mcver == "1.20.4" ]]; then
+if [[ $mcver == "1.20.4" ]]; then
     vanilla="https://piston-data.mojang.com/v1/objects/8dd1a28015f51b1803213892b50b7b4fc76e594d/server.jar"
-elif [[ $mcver == "1.20.1" ]]; then
-  vanilla="https://piston-data.mojang.com/v1/objects/84194a2f286ef7c14ed7ce0090dba59902951553/server.jar"
-elif [[ $mcver == "1.19.4" ]]; then
-  vanilla="https://piston-data.mojang.com/v1/objects/8f3112a1049751cc472ec13e397eade5336ca7ae/server.jar"
-elif [[ $mcver == "1.19.3" ]]; then
-  vanilla="https://piston-data.mojang.com/v1/objects/c9df48efed58511cdd0213c56b9013a7b5c9ac1f/server.jar"
-elif [[ $mcver == "1.19.2" ]]; then
-  vanilla="https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar"
-elif [[ $mcver == "1.19" ]]; then
-  vanilla="https://launcher.mojang.com/v1/objects/e00c4052dac1d59a1188b2aa9d5a87113aaf1122/server.jar"
-elif [[ $mcver == "1.18.2" ]]; then
-  vanilla="https://launcher.mojang.com/v1/objects/c8f83c5655308435b3dcf03c06d9fe8740a77469/server.jar"
-elif [[ $mcver == "1.18.1" ]]; then
-  vanilla="https://launcher.mojang.com/v1/objects/125e5adf40c659fd3bce3e66e67a16bb49ecc1b9/server.jar"
-elif [[ $mcver == "1.18" ]]; then
-  vanilla="https://launcher.mojang.com/v1/objects/3cf24a8694aca6267883b17d934efacc5e44440d/server.jar"
-elif [[ $mcver == "1.17.1" ]]; then
-  vanilla="https://launcher.mojang.com/v1/objects/a16d67e5807f57fc4e550299cf20226194497dc2/server.jar"
-elif [[ $mcver == "1.17" ]]; then
-  # 1.17
-  vanilla="https://launcher.mojang.com/v1/objects/0a269b5f2c5b93b1712d0f5dc43b6182b9ab254e/server.jar"
 else
   # 1.16.5
   vanilla="https://launcher.mojang.com/v1/objects/1b557e7b033b583cd9f66746b7a9ab1ec1673ced/server.jar"
@@ -455,29 +355,6 @@ fi
 flavor=""
 
 declare -a flavors=()
-
-if [[ $mcverANY == "1" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.17" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]] || [[ $mcver == "1.20.4" ]]; then
-  flavors+=("P" "Paper (Default, ${mcver})")
-fi
-
-# Supports 1.14+
-if [[ $mcverANY == "1" ]] || [ $(version $mcver) -ge $(version "1.14.0") ]; then
-  flavors+=("F" "Fabric (${mcver})")
-fi
-
-if [[ $mcverANY == "1" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]]; then
-  flavors+=("R" "Forge (${mcver})")
-fi
-
-# Supports 1.9+
-if [[ $mcverANY == "1" ]] || [ $(version $mcver) -ge $(version "1.9") ]; then
-  flavors+=("S" "Spigot (${mcver})")
-fi
-
-# 1.12 only
-if [[ $mcverANY == "1" ]] || [[ $mcver == "1.12.2" ]]; then
-  flavors+=("C" "Cuberite (1.12)")
-fi
 
 if [[ $mcverANY == "1" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.17" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]] || [[ $mcver == "1.20.4" ]]; then
   flavors+=("V" "Vanilla (${mcver})")
@@ -488,94 +365,11 @@ result=$(dialog --title "Pinecraft Installer $pcver" --menu "Choose your Minecra
 
 if [[ $? == 0 ]]; then
   case $result in
-    S)
-      # https://hub.spigotmc.org/jenkins/job/BuildTools/
-      # NOTE: BuildTools (Spigot) AUTOMATICALLY ensures the correct Minecraft version is installed (see switches below)
-      #       No need to update the script manually.
-      flavor="Spigot"
-      url="https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar"
-      jarname="spigot-*.jar"
-      switches="--rev ${mcver}"
-      ;;
-    F)
-      # https://fabricmc.net/use/
-      flavor="Fabric"
-      url="https://maven.fabricmc.net/net/fabricmc/fabric-installer/0.11.2/fabric-installer-0.11.2.jar"
-      jarname="fabric-server-launch.jar"
-      switches="server -mcversion ${mcver} -downloadMinecraft"
-      ;;
-    R)
-      # https://files.minecraftforge.net/net/minecraftforge/forge/
-      flavor="Forge"
-      if [[ $mcver == "1.20.2" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.2-48.0.23/forge-1.20.2-48.0.23-installer.jar"
-      elif [[ $mcver == "1.20.1" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.2.1/forge-1.20.1-47.2.1-installer.jar"
-      elif [[ $mcver == "1.19.4" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.19.4-45.1.0/forge-1.19.4-45.1.0-installer.jar"
-      elif [[ $mcver == "1.19.3" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.19.3-44.1.23/forge-1.19.3-44.1.23-installer.jar"
-      elif [[ $mcver == "1.19.2" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.19.2-43.2.1/forge-1.19.2-43.2.1-installer.jar"
-      elif [[ $mcver == "1.19" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.19-41.0.110/forge-1.19-41.0.110-installer.jar"
-      elif [[ $mcver == "1.18.2" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.18.2-40.1.45/forge-1.18.2-40.1.45-installer.jar"
-      elif [[ $mcver == "1.18.1" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.18.1-39.0.85/forge-1.18.1-39.0.85-installer.jar"
-      elif [[ $mcver == "1.18" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.18-38.0.17/forge-1.18-38.0.17-installer.jar"
-      elif [[ $mcver == "1.17.1" ]]; then
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.17.1-37.0.107/forge-1.17.1-37.0.107-installer.jar"
-      else
-        url="https://maven.minecraftforge.net/net/minecraftforge/forge/1.16.5-36.1.0/forge-1.16.5-36.1.0-installer.jar"
-      fi
-      jarname="forge-installer.jar"
-      switches="--installServer ."
-      ;;
     V)
       flavor="Vanilla"
       url=$vanilla
       jarname="server.jar"
       switches=""
-      ;;
-    P)
-      # https://papermc.io/downloads
-      flavor="Paper"
-      if [[ $mcver == "1.20.2" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.20.2/builds/233/downloads/paper-1.20.2-233.jar"
-      elif [[ $mcver == "1.20.1" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds/196/downloads/paper-1.20.1-196.jar"
-      elif [[ $mcver == "1.19.4" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.19.4/builds/550/downloads/paper-1.19.4-550.jar"
-      elif [[ $mcver == "1.19.3" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.19.3/builds/448/downloads/paper-1.19.3-448.jar"
-      elif [[ $mcver == "1.19.2" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.19.2/builds/307/downloads/paper-1.19.2-307.jar"
-      elif [[ $mcver == "1.19" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.19/builds/81/downloads/paper-1.19-81.jar"
-      elif [[ $mcver == "1.18.2" ]]; then
-        url="https://api.papermc.io/v2/projects/paper/versions/1.18.2/builds/375/downloads/paper-1.18.2-375.jar"
-      elif [[ $mcver == "1.18.1" ]]; then
-        url="https://papermc.io/api/v2/projects/paper/versions/1.18.1/builds/214/downloads/paper-1.18.1-214.jar"
-      elif [[ $mcver == "1.18" ]]; then
-        url="https://papermc.io/api/v2/projects/paper/versions/1.18/builds/66/downloads/paper-1.18-66.jar"
-      elif [[ $mcver == "1.17.1" ]]; then
-        url="https://papermc.io/api/v2/projects/paper/versions/1.17.1/builds/391/downloads/paper-1.17.1-391.jar"
-      elif [[ $mcver == "1.17" ]]; then
-        url="https://papermc.io/api/v2/projects/paper/versions/1.17/builds/28/downloads/paper-1.17-28.jar"
-      else
-        url="https://papermc.io/api/v2/projects/paper/versions/1.16.5/builds/778/downloads/paper-1.16.5-778.jar"
-      fi
-      jarname="minecraft.jar"
-      switches=""
-      ;;
-    C)
-      flavor="Cuberite"
-      mcver="1.12" # Cuberite is a whole other beast
-      script="https://compile.cuberite.org"
-      executable="Cuberite"
-      compiler=1;
       ;;
     esac
 else
@@ -858,108 +652,6 @@ else
   java -Xmx500M -jar minecraft.jar $switches > /dev/null 2&>1
 fi
 
-if [[ $flavor == "Cuberite" ]]; then
-
-  if [[ $cuberiteresponse != 0 ]]; then
-    dialog --title "Error" \
-      --msgbox "\nSadly, it appears compiling failed." 8 50
-    echo
-    echo
-    echo "Failed."
-    echo
-    exit 0
-  else
-    mv cuberite/build-cuberite/Server/* $instdir
-  fi
-else
-  # The installer also created or obtained the Minecraft server.jar file. Include it.
-  if [[ -e ${instdir}src/server.jar ]]; then
-    cp -f ${instdir}src/server.jar $instdir
-  fi
-
-  # Fabric and Forge use a libraries folder, so we'll keep that.
-  if [[ -d ${instdir}src/libraries ]]; then
-    # Move existing Libraries folder before replacing
-    if [[ -e ${instdir}libraries ]]; then
-      mv ${instdir}libraries ${instdir}libraries~backup_$(date +%Y-%m-%d_%H-%M-%S)
-    fi
-    mv ${instdir}src/libraries ${instdir}
-    if [[ ! -e ${instdir}server.properties ]]; then
-      cp ${SCRIPT_DIR}/assets/server.properties ${instdir}
-    fi
-  fi
-
-  if [[ $flavor == "Forge" ]]; then
-    # The forge installer removes itself and creates instead a minecraft.jar file
-    # Use this instead to measure whether compile was successful
-    jarname="minecraft.jar"
-  fi
-
-  jarfile=$(ls ${instdir}src/${jarname})
-  if [[ $jarfile == "" ]]; then
-    dialog --title "Error" \
-      --msgbox "\nSadly, it appears compiling failed." 8 50
-    echo
-    echo
-    echo "Failed."
-    echo
-    exit 0
-  else
-    cp $jarfile $instdir
-    t=${jarfile#*-}
-    version=$(basename $t .jar)
-  fi
-fi
-
-if [[ $psi == 1 ]]; then
-
-  # PHP interpreter / server for Pinecraft configuration interface
-  if [ $(dpkg-query -W -f='${Status}' php 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    dialog --infobox "Installing PHP..." 3 34 ;
-    if [[ $updated == 0 ]]; then
-      apt-get update > /dev/null 2>&1
-      updated=1
-    fi
-    apt-get -y install php-cli > /dev/null 2>&1
-  fi
-
-  if [[ ! -d /etc/pinecraft/psi/ ]]; then
-    mkdir -p /etc/pinecraft/psi
-  fi
-
-  cp ${base}/assets/psi/* /etc/pinecraft/psi/
-
-  printf '{"pcver":"%s","instdir":"%s","flavor":"%s"}\n' "$pcver" "$instdir" "$flavor" > /etc/pinecraft/psi/psi.json
-
-  chown -R $user:$user /etc/pinecraft/
-fi
-
-###############################################
-# Patch Minecraft against exploit within Log4j
-# See https://www.minecraft.net/en-us/article/important-message--security-vulnerability-java-edition?ref=launcher
-###############################################
-
-# This exploit was patched in 1.18.1, so we only have to deal with older releases.
-
-# 1.17-1.18
-if [ $(version $mcver) -ge $(version "1.17") ] && [ $(version $mcver) -le $(version "1.18") ]; then
-  cli_args="-Dlog4j2.formatMsgNoLookups=true"
-fi
-# 1.12-1.16.5
-if [ $(version $mcver) -ge $(version "1.12") ] && [ $(version $mcver) -le $(version "1.16.5") ]; then
-  wget https://launcher.mojang.com/v1/objects/02937d122c86ce73319ef9975b58896fc1b491d1/log4j2_112-116.xml -O ${instdir}log4j2_112-116.xml > /dev/null 2>&1
-  cli_args="-Dlog4j.configurationFile=log4j2_112-116.xml"
-fi
-# 1.7-1.11.2
-if [ $(version $mcver) -ge $(version "1.7") ] && [ $(version $mcver) -le $(version "1.11.2") ]; then
-  wget https://launcher.mojang.com/v1/objects/dd2b723346a8dcd48e7f4d245f6bf09e98db9696/log4j2_17-111.xml -O ${instdir}log4j2_112-116.xml > /dev/null 2>&1
-  cli_args="-Dlog4j.configurationFile=log4j2_17-111.xml"
-fi
-
-###############################################
-# /Patch against exploit within Log4j
-###############################################
-
 ###############################################
 # Create the scripts
 ###############################################
@@ -1116,39 +808,6 @@ ln -s ${instdir}stop /etc/rc6.d/K01stop-pinecraft
 ###############################################
 
 ###############################################
-# Overclock
-###############################################
-
-if [[ ! $oc_volt == 0 ]]; then
-  dialog --infobox "Overclocking your system..." 3 34 ; sleep 1
-  datestamp=$(date +"%Y-%m-%d_%H-%M-%S")
-
-  cp $configfile /boot/config-${datestamp}.txt
-
-  # Replace existing overclock settings or add new ones if none exist
-
-  /bin/sed -i -- "/over_voltage=/c\over_voltage=${oc_volt}" $configfile
-  if ! grep -q "over_voltage=" $configfile; then
-    echo "over_voltage=$oc_volt" >> $configfile
-  fi
-
-  /bin/sed -i -- "/arm_freq=/c\arm_freq=${oc_freq}" $configfile
-  if ! grep -q "arm_freq=" $configfile; then
-    echo "arm_freq=${oc_freq}" >> $configfile
-  fi
-
-  /bin/sed -i -- "/dtparam=audio=/c\dtparam=audio=off" $configfile
-  if ! grep -q "dtparam=audio=" $configfile; then
-    echo "dtparam=audio=" >> $configfile
-  fi
-
-fi
-
-###############################################
-# /Overclock
-###############################################
-
-###############################################
 # Tweak Server Configs
 ###############################################
 
@@ -1203,13 +862,6 @@ if [[ -e ${instdir}server.properties ]]; then
       fi
 fi
 
-###############################################
-# /Tweak Server Configs
-###############################################
-
-# Create a file to later let us know the version of Pinecraft used
-echo $pcver > ${instdir}cat5tv.ver
-
 # Set ownership to the user
 dialog --infobox "Setting ownership..." 3 24
 chown -R $user:$user $instdir
@@ -1235,15 +887,6 @@ chown -R $user:$user $instdir
     # as this user requested not to auto-run
     /bin/sed -i~ "\~${instdir}server~d" /tmp/cron.tmp
     cronupdate=1
-  fi
-
-  if [[ $psi == 1 ]]; then
-    if ! grep -q "pinecraft/psi/psi.php" /tmp/cron.tmp; then
-      dialog --infobox "Enabling Pinecraft SI..." 3 34 ; sleep 1
-      php=$(type -p php)
-      printf "\n@reboot $php -S 0.0.0.0:8088 -t /etc/pinecraft/psi/ > /dev/null 2>&1\n" >> /tmp/cron.tmp
-      cronupdate=1
-    fi
   fi
 
   # Import revised crontab
