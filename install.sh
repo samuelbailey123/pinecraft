@@ -146,6 +146,7 @@ if [[ -e /home/$user ]]; then
         echo
         exit 1
       fi
+    fi
 else
   echo "Aborting: $user does not have a homedir."
   exit 1
