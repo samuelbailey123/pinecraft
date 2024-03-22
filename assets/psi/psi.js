@@ -1,73 +1,29 @@
-function running() {
-  $.ajax({
-    url : 'ajax.php',
-    data:{"query":"running"},
-    type: 'POST',
-    success: function(data){
-      $('#running').html(data);
-    }
-  });
+// Define a function to perform the ajax call
+function queryServerInfo(query, targetElementId, interval) {
+  var queryAndUpdate = function () {
+    $.ajax({
+      url: "ajax.php",
+      data: { query: query },
+      type: "POST",
+      success: function (data) {
+        $("#" + targetElementId).html(data);
+      },
+    });
+  };
+
+  queryAndUpdate(); // Call immediately on page load
+
+  if (interval) {
+    setInterval(queryAndUpdate, interval); // Set interval for refreshing the data
+  }
 }
 
-function load() {
-  $.ajax({
-    url : 'ajax.php',
-    data:{"query":"load"},
-    type: 'POST',
-    success: function(data){
-      $('#load').html(data);
-    }
-  });
-}
+$(document).ready(function () {
+  queryServerInfo("uptime", "uptime", 1000); // Refresh every second
+  queryServerInfo("running", "running", 5000); // Refresh every 5 seconds
+  queryServerInfo("load", "load", 30000); // Refresh every 30 seconds
 
-function size() {
-  $.ajax({
-    url : 'ajax.php',
-    data:{"query":"size"},
-    type: 'POST',
-    success: function(data){
-      $('#size').html(data);
-    }
-  });
-}
-
-function df() {
-  $.ajax({
-    url : 'ajax.php',
-    data:{"query":"df"},
-    type: 'POST',
-    success: function(data){
-      $('#df').html(data);
-    }
-  });
-}
-
-function uptime() {
-  $.ajax({
-    url : 'ajax.php',
-    data:{"query":"uptime"},
-    type: 'POST',
-    success: function(data){
-      $('#uptime').html(data);
-    }
-  });
-}
-
-$(document).ready(function() {
-
-  uptime();
-  setInterval(function(){ uptime(); }, 1000);
-
-  running();
-  setInterval(function(){ running(); }, 5000);
-
-  load();
-  setInterval(function(){ load(); }, 30000);
-
-  size();
-  df();
-  setInterval(function(){ size(); df(); }, 1800000);
-
+  // Size and DF are refreshed together every 30 minutes
+  queryServerInfo("size", "size", 1800000);
+  queryServerInfo("df", "df", 1800000);
 });
-
-

@@ -1,159 +1,124 @@
 <?php
-/**
- * See https://developer.valvesoftware.com/wiki/Source_RCON_Protocol for
- * more information about Source RCON Packets
- *
- * @copyright 2013 Chris Churchwell
- */
-class Rcon {
+class Rcon
+{
+    private $host;
+    private $port;
+    private $password;
+    private $timeout;
 
-  private $host;
-  private $port;
-  private $password;
-  private $timeout;
+    private $socket;
+    private $authorized;
+    private $last_response;
 
-  private $socket;
+    const PACKET_AUTHORIZE = 5;
+    const PACKET_COMMAND = 6;
 
-  private $authorized;
-  private $last_response;
+    const SERVERDATA_AUTH = 3;
+    const SERVERDATA_AUTH_RESPONSE = 2;
+    const SERVERDATA_EXECCOMMAND = 2;
+    const SERVERDATA_RESPONSE_VALUE = 0;
 
-  const PACKET_AUTHORIZE = 5;
-  const PACKET_COMMAND = 6;
-
-  const SERVERDATA_AUTH = 3;
-  const SERVERDATA_AUTH_RESPONSE = 2;
-  const SERVERDATA_EXECCOMMAND = 2;
-  const SERVERDATA_RESPONSE_VALUE = 0;
-
-  public function __construct($host, $port, $password, $timeout){
-    $this->host = $host;
-    $this->port = $port;
-    $this->password = $password;
-    $this->timeout = $timeout;
-  }
-
-  public function get_response(){
-    return $this->last_response;
-  }
-
-  public function connect(){
-    $this->socket = fsockopen($this->host, $this->port, $errno, $errstr, $this->timeout);
-
-    if (!$this->socket)
+    public function __construct($host, $port, $password, $timeout)
     {
-      $this->last_response = $errstr;
-      return false;
+        $this->host = $host;
+        $this->port = $port;
+        $this->password = $password;
+        $this->timeout = $timeout;
     }
 
-    //set timeout
-    stream_set_timeout($this->socket, 3, 0);
-
-    //authorize
-    $auth = $this->authorize();
-
-    if ($auth) {
-      return true;
-    }
-
-    return false;
-  }
-
-  public function disconnect(){
-    if ($this->socket)
+    public function get_response()
     {
-      fclose($this->socket);
-    }
-  }
-
-  public function is_connected(){
-    return $this->authorized;
-  }
-
-  public function send_command($command)
-  {
-    if (!$this->is_connected()){
-      return false;
+        return $this->last_response;
     }
 
-    // send command packet.
-    $this->write_packet(Rcon::PACKET_COMMAND, Rcon::SERVERDATA_EXECCOMMAND, $command);
-
-    // get response.
-    $response_packet = $this->read_packet();
-    if ($response_packet['id'] == Rcon::PACKET_COMMAND)
+    public function connect()
     {
-      if ($response_packet['type'] == Rcon::SERVERDATA_RESPONSE_VALUE)
-      {
-        $this->last_response = $response_packet['body'];
-        return $response_packet['body'];
-      }
+        $this->socket = fsockopen(
+            $this->host,
+            $this->port,
+            $errno,
+            $errstr,
+            $this->timeout
+        );
+        if (!$this->socket) {
+            $this->last_response = $errstr;
+            return false;
+        }
+
+        stream_set_timeout($this->socket, 3, 0);
+        return $this->authorize();
     }
 
-    return false;
-  }
-
-  private function authorize(){
-    $this->write_packet(Rcon::PACKET_AUTHORIZE, Rcon::SERVERDATA_AUTH, $this->password);
-    $response_packet = $this->read_packet();
-
-    if ($response_packet['type'] == Rcon::SERVERDATA_AUTH_RESPONSE)
+    public function disconnect()
     {
-      if ($response_packet['id'] == Rcon::PACKET_AUTHORIZE)
-      {
-        $this->authorized = true;
-        return true;
-      }
+        if ($this->socket) {
+            fclose($this->socket);
+        }
     }
 
-    $this->disconnect();
-    return false;
-  }
+    public function is_connected()
+    {
+        return $this->authorized;
+    }
 
-  /**
-   * Writes a packet to the socket stream..
-   */
-  private function write_packet($packet_id, $packet_type, $packet_body)
-  {
-    /*
-    Size      32-bit little-endian Signed Integer     Varies, see below.
-    ID        32-bit little-endian Signed Integer    Varies, see below.
-    Type      32-bit little-endian Signed Integer    Varies, see below.
-    Body      Null-terminated ASCII String      Varies, see below.
-    Empty String  Null-terminated ASCII String      0x00
-    */
+    public function send_command($command)
+    {
+        if (!$this->is_connected()) {
+            return false;
+        }
 
-    //create packet
-    $packet = pack("VV", $packet_id, $packet_type);
-    $packet = $packet . $packet_body . "\x00";
-    $packet = $packet . "\x00";
+        $this->write_packet(
+            self::PACKET_COMMAND,
+            self::SERVERDATA_EXECCOMMAND,
+            $command
+        );
+        $response_packet = $this->read_packet();
+        if (
+            $response_packet["id"] === self::PACKET_COMMAND &&
+            $response_packet["type"] === self::SERVERDATA_RESPONSE_VALUE
+        ) {
+            $this->last_response = $response_packet["body"];
+            return $response_packet["body"];
+        }
 
-    // get packet size.
-    $packet_size = strlen($packet);
+        return false;
+    }
 
-    // attach size to packet.
-    $packet = pack("V", $packet_size) . $packet;
+    private function authorize()
+    {
+        $this->write_packet(
+            self::PACKET_AUTHORIZE,
+            self::SERVERDATA_AUTH,
+            $this->password
+        );
+        $response_packet = $this->read_packet();
+        if (
+            $response_packet["type"] === self::SERVERDATA_AUTH_RESPONSE &&
+            $response_packet["id"] === self::PACKET_AUTHORIZE
+        ) {
+            $this->authorized = true;
+            return true;
+        }
 
-    // write packet.
-    fwrite($this->socket, $packet, strlen($packet));
+        $this->disconnect();
+        return false;
+    }
 
-  }
+    private function write_packet($packet_id, $packet_type, $packet_body)
+    {
+        $packet =
+            pack("VV", $packet_id, $packet_type) . $packet_body . "\x00\x00";
+        $packet_size = strlen($packet);
+        $packet = pack("V", $packet_size) . $packet;
+        fwrite($this->socket, $packet, $packet_size);
+    }
 
-  private function read_packet()
-  {
-    //get packet size.
-    $size_data = fread($this->socket, 4);
-    $size_pack = unpack("V1size", $size_data);
-    $size = $size_pack['size'];
-
-    // if size is > 4096, the response will be in multiple packets.
-    // this needs to be address. get more info about multi-packet responses
-    // from the RCON protocol specification at
-    // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
-    // currently, this script does not support multi-packet responses.
-
-    $packet_data = fread($this->socket, $size);
-    $packet_pack = unpack("V1id/V1type/a*body", $packet_data);
-
-    return $packet_pack;
-  }
+    private function read_packet()
+    {
+        $size_data = fread($this->socket, 4);
+        $size_pack = unpack("V1size", $size_data);
+        $size = $size_pack["size"];
+        $packet_data = fread($this->socket, $size);
+        return unpack("V1id/V1type/a*body", $packet_data);
+    }
 }

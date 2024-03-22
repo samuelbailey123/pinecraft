@@ -1,32 +1,35 @@
 <?php
-  /*
-    Pinecraft Settings Interface (PSI)
-    By Robbie Ferguson
-  */
-  require_once('functions.php');
-  session_destroy();
-  session_start();
-  $config = loadConfig();
-  if (isset($_POST['password'])) {
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    if (isset($_POST['password1'])) {
-      if (password_verify($_POST['password'], $_POST['password1'])) {
-        // Password is good. Store it, and login.
-        $config->adminpass = $password;
-        file_put_contents($config->cfgfile,json_encode($config));
-        $_SESSION['auth'] = 1;
-      }
-    } else {
-      if (password_verify($_POST['password'], $config->adminpass)) {
-        $_SESSION['auth'] = 1;
-      }
-    }
-  }
-  if (auth()) {
-    header('location:/');
-    exit();
-  }
 
+require_once "functions.php";
+session_destroy();
+session_start();
+
+$config = loadConfig();
+
+if (isset($_POST["password"])) {
+    if (isset($_POST["password1"])) {
+        // New password setup
+        if ($_POST["password"] === $_POST["password1"]) {
+            // Passwords match, store hash and log in
+            $config->adminpass = password_hash(
+                $_POST["password"],
+                PASSWORD_DEFAULT
+            );
+            file_put_contents($config->cfgfile, json_encode($config));
+            $_SESSION["auth"] = 1;
+        }
+    } else {
+        // Existing password login
+        if (password_verify($_POST["password"], $config->adminpass)) {
+            $_SESSION["auth"] = 1;
+        }
+    }
+}
+
+if (auth()) {
+    header("Location: /");
+    exit();
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -50,7 +53,7 @@
       <h2>Pinecraft Settings Interface</h2>
     <?php if (!isset($password)) { ?>
       <p>This is your first time logging in. Please set a password.</p>
-    <?php } elseif (!isset($_POST['password1']))  { ?>
+    <?php } elseif (!isset($_POST["password1"])) { ?>
       <p>Please confirm the password by entering it one more time.</p>
     <?php } else { ?>
       <p>The passwords did not match. Please try again.</p>
@@ -62,7 +65,11 @@
         <form method="post" class="card p-2">
           <div class="input-group">
             <input type="password" name="password" class="form-control" placeholder="Password">
-            <?php if (isset($password)) echo '<input type="hidden" name="password1" value="' . $password . '">'; ?>
+            <?php if (isset($password)) {
+                echo '<input type="hidden" name="password1" value="' .
+                    $password .
+                    '">';
+            } ?>
             <button type="submit" class="btn btn-secondary">Submit</button>
           </div>
         </form>

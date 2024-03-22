@@ -1,65 +1,73 @@
 <?php
-  /*
-    Pinecraft Settings Interface (PSI)
-    By Robbie Ferguson
-  */
-  require_once('functions.php');
 
-  if (!auth()) {
-    header('location:login.php');
+require_once "functions.php";
+
+if (!auth()) {
+    header("Location: login.php");
     exit();
-  }
+}
 
-  $config = loadConfig();
+$config = loadConfig();
 
-  // Load Game Server Version
-  if (file_exists($config->instdir . 'version_history.json')) {
-    $tmp = json_decode(file_get_contents($config->instdir . 'version_history.json'));
-    $config->mcver = $tmp->currentVersion;
-  }
+// Load Game Server Version
+if (file_exists($config->instdir . "version_history.json")) {
+    $content = file_get_contents($config->instdir . "version_history.json");
+    $versionHistory = json_decode($content);
+    $config->mcver = $versionHistory->currentVersion;
+}
 
-  // Load server.properties
-  if (file_exists($config->instdir . 'server.properties')) {
-    $server = file($config->instdir . 'server.properties');
-    if (is_array($server)) {
-      $config->server = new stdClass();
-      foreach($server as $line) {
-        // Ignore commented lines entirely
-        if (substr(trim($line),0,1) != '#') {
-          $tmp = explode('=',$line);
-          $key = trim($tmp[0]);
-          $value = trim($tmp[1]);
-          $config->server->$key = $value;
+// Load server.properties
+if (file_exists($config->instdir . "server.properties")) {
+    $serverProperties = file($config->instdir . "server.properties");
+    if (is_array($serverProperties)) {
+        $config->server = new stdClass();
+        foreach ($serverProperties as $line) {
+            if (substr(trim($line), 0, 1) != "#") {
+                list($key, $value) = array_map("trim", explode("=", $line, 2));
+                $config->server->$key = $value;
+            }
         }
-      }
     }
-  } else {
-    die('Server not initialized.');
-  }
+} else {
+    die("Server not initialized.");
+}
 
-  // Load user info
-  if (!isset($config->server->users)) $config->server->users = new stdClass();
-  if (!isset($config->server->users->ban)) $config->server->users->ban = new stdClass();
-  // Players on server
-  if (file_exists($config->instdir . 'usercache.json')) {
-    $config->server->users->players = json_decode(file_get_contents($config->instdir . 'usercache.json'));
-  }
-  // Ops (admin) players
-  if (file_exists($config->instdir . 'ops.json')) {
-    $config->server->users->ops = json_decode(file_get_contents($config->instdir . 'ops.json'));
-  }
-  // Banned players
-  if (file_exists($config->instdir . 'banned-players.json')) {
-    $config->server->users->ban->player = json_decode(file_get_contents($config->instdir . 'banned-players.json'));
-  }
-  // Banned IP addresses
-  if (file_exists($config->instdir . 'banned-ips.json')) {
-    $config->server->users->ban->ip = json_decode(file_get_contents($config->instdir . 'banned-ips.json'));
-  }
+// Initialize server users object if not set
+if (!isset($config->server->users)) {
+    $config->server->users = new stdClass();
+}
 
-  // Store everything in the main config file
-  file_put_contents($config->cfgfile,json_encode($config));
+// Initialize banned users/ips object if not set
+if (!isset($config->server->users->ban)) {
+    $config->server->users->ban = new stdClass();
+}
 
+// Players on server
+if (file_exists($config->instdir . "usercache.json")) {
+    $content = file_get_contents($config->instdir . "usercache.json");
+    $config->server->users->players = json_decode($content);
+}
+
+// Ops (admin) players
+if (file_exists($config->instdir . "ops.json")) {
+    $content = file_get_contents($config->instdir . "ops.json");
+    $config->server->users->ops = json_decode($content);
+}
+
+// Banned players
+if (file_exists($config->instdir . "banned-players.json")) {
+    $content = file_get_contents($config->instdir . "banned-players.json");
+    $config->server->users->ban->player = json_decode($content);
+}
+
+// Banned IP addresses
+if (file_exists($config->instdir . "banned-ips.json")) {
+    $content = file_get_contents($config->instdir . "banned-ips.json");
+    $config->server->users->ban->ip = json_decode($content);
+}
+
+// Store everything in the main config file
+file_put_contents($config->cfgfile, json_encode($config));
 ?>
 <!doctype html>
 <html lang="en">
@@ -313,7 +321,7 @@
   </footer>
 </div>
 
-  <p><?php print_r($config) ?></p>
+  <p><?php print_r($config); ?></p>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>

@@ -1,11 +1,14 @@
+/* General Styles */
 body {
-  font-family: 'Open Sans', sans-serif;
+    font-family: "Open Sans", sans-serif;
 }
 
+/* Layout Containers */
 .container {
-  max-width: 960px;
+    max-width: 960px;
 }
 
+/* Top Bar */
 #topbar {
-  color: #666;
+    color: #666;
 }

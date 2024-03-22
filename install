@@ -43,7 +43,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
 
 # Install the web interface
-#psi=1
+psi=1
 
 # Prevent running multiple apt updates
 updated=0
