@@ -248,31 +248,9 @@ do
   done
 
   exec 3>&1
-  user=$(dialog --title "Linux User" --menu "Linux User to run Minecraft Server:" 20 50 10 "${usersarr[@]}" 2>&1 1>&3);
-
-  case $? in
-  0)
-   if [[ $user == "" ]]; then
-    validuser=""
-   else
-    validuser=$(getent passwd $user)
-   fi
-   if [[ $validuser == "" ]]; then
-     dialog --title "Error" \
-       --msgbox "\n $user does not exist." 6 50
-   fi
-   ;;
-  1)
-   echo
-   echo
-   echo "Aborted."
-   echo
-   exit 1 ;;
-  esac
+  user="samuelbailey";
 
 done
-
-
 
 instdir="/home/$user/minecraft/"
 
