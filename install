@@ -216,29 +216,37 @@ declare -A vanilla_servers=(
 vanilla="${vanilla_servers[$mcver]:-${vanilla_servers["1.16.5"]}}"
 flavor=""
 
-declare -a flavors=()
+declare -A supported_flavors=(
+  ["1.17.1"]="P R V"
+  ["1.17"]="P R V"
+  ["1.16.5"]="P R V"
+  ["1.18"]="P R V"
+  ["1.18.1"]="P R V"
+  ["1.18.2"]="P R V"
+  ["1.19"]="P R V"
+  ["1.19.2"]="P R V"
+  ["1.19.3"]="P R V"
+  ["1.19.4"]="P R V"
+  ["1.20.1"]="P R V"
+  ["1.20.2"]="P R V"
+  ["1.12.2"]="C"
+)
 
-# If $mcverANY is set to "1" or if $mcver is among the specified versions,
-# the corresponding flavors are made available for selection.
-if [[ $mcverANY == "1" ]] || [[ $mcver =~ ^(1\.17\.1|1\.17|1\.16\.5|1\.18\.1|1\.18\.2|1\.18|1\.19\.2|1\.19\.3|1\.19\.4|1\.19|1\.20\.1|1\.20\.2)$ ]]; then
-  flavors+=("P" "Paper (Default, ${mcver})")
-  flavors+=("R" "Forge (${mcver})")
-  flavors+=("V" "Vanilla (${mcver})")
-fi
-
-# Adds Fabric as an option if the conditions are met, which requires version 1.14.0 or higher.
-if [[ $mcverANY == "1" ]] || [ $(version "$mcver") -ge $(version "1.14.0") ]; then
-  flavors+=("F" "Fabric (${mcver})")
-fi
-
-# Adds Spigot if the conditions are met, which requires version 1.9 or higher.
-if [[ $mcverANY == "1" ]] || [ $(version "$mcver") -ge $(version "1.9") ]; then
-  flavors+=("S" "Spigot (${mcver})")
-fi
-
-# Cuberite is only supported in version 1.12
-if [[ $mcverANY == "1" ]] || [[ $mcver == "1.12.2" ]]; then
-  flavors+=("C" "Cuberite (1.12)")
+# Using version numbers or the manual override, automatically choose which server flavors are supported
+flavors=()
+if [[ $mcverANY == "1" ]]; then
+  flavors=("P" "Paper" "F" "Fabric" "R" "Forge" "S" "Spigot" "C" "Cuberite" "V" "Vanilla")
+else
+  for flavor in ${supported_flavors[$mcver]}; do
+    case $flavor in
+      P) flavors+=("P" "Paper (Default, ${mcver})") ;;
+      F) [[ $(version $mcver) -ge $(version "1.14.0") ]] && flavors+=("F" "Fabric (${mcver})") ;;
+      R) flavors+=("R" "Forge (${mcver})") ;;
+      S) [[ $(version $mcver) -ge $(version "1.9") ]] && flavors+=("S" "Spigot (${mcver})") ;;
+      C) [[ $mcver == "1.12.2" ]] && flavors+=("C" "Cuberite (1.12)") ;;
+      V) flavors+=("V" "Vanilla (${mcver})") ;;
+    esac
+  done
 fi
 
 # Dialog to choose the server type
