@@ -91,21 +91,26 @@ mcver="1.16.5"
 # Get valid Linux user; default to current user if no argument is given
 user=${1:-$(whoami)}
 
-# Loop until a valid user is selected
-while ! id "$user" &>/dev/null; do
-  # Map usernames to menu options if the minecraft directory exists in their home
+while true; do
+  # Map usernames to menu options if the Minecraft directory exists in their home
   options=()
-  while IFS=: read -r username _ pw_dir; do
+  while IFS=: read -r username _ pw_dir _; do
     [[ -d "$pw_dir/minecraft" ]] && options+=("$username" "$pw_dir/minecraft/")
   done < <(getent passwd)
 
+  # Prompt user selection
   user=$(dialog --title "Linux User" --menu "Select the Linux user to run the Minecraft Server:" 20 50 10 "${options[@]}" 3>&1 1>&2 2>&3)
 
-  [[ $? -ne 0 ]] && { echo is not a Pinecraft installation. 12 50; exit 0; }
-  selection=$(dialog --title "Pinecraft Installer $pcver" --menu "Pinecraft is already installed:" 9 40 4 "U" "Upgrade Software (Keep World)" "R" "Remove and Reinstall" 3>&1 1>&2 2>&3)
-  [[ $selection == "U" ]] && upgrade=1
-  [[ $selection == "R" ]] && { dialog --title "Confirmation" --yesno "This will remove your entire previous installation. Continue?" 12 50 || exit 1; replace=1; }
-fi
+  # Handle cancel or exit
+  [[ $? -ne 0 ]] && { echo "Operation cancelled by the user." >&2; exit 1; }
+
+  # Check if the selected user is valid
+  if ! id "$user" &>/dev/null; then
+    dialog --title "Error" --msgbox "The selected user does not exist or is not a Pinecraft installation." 8 50
+  else
+    break
+  fi
+done
 
 # Fresh install: handle seed and version choices
 if (( upgrade == 0 )); then
