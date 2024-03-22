@@ -652,6 +652,52 @@ else
   java -Xmx500M -jar minecraft.jar $switches > /dev/null 2&>1
 fi
 
+# The installer also created or obtained the Minecraft server.jar file. Include it.
+if [[ -e ${instdir}src/server.jar ]]; then
+  cp -f ${instdir}src/server.jar $instdir
+fi
+
+# Fabric and Forge use a libraries folder, so we'll keep that.
+if [[ -d ${instdir}src/libraries ]]; then
+  # Move existing Libraries folder before replacing
+  if [[ -e ${instdir}libraries ]]; then
+    mv ${instdir}libraries ${instdir}libraries~backup_$(date +%Y-%m-%d_%H-%M-%S)
+  fi
+  mv ${instdir}src/libraries ${instdir}
+  if [[ ! -e ${instdir}server.properties ]]; then
+    cp ${SCRIPT_DIR}/assets/server.properties ${instdir}
+  fi
+fi
+
+  jarfile=$(ls ${instdir}src/${jarname})
+  if [[ $jarfile == "" ]]; then
+    dialog --title "Error" \
+      --msgbox "\nSadly, it appears compiling failed." 8 50
+    echo
+    echo
+    echo "Failed."
+    echo
+    exit 0
+  else
+    cp $jarfile $instdir
+    t=${jarfile#*-}
+    version=$(basename $t .jar)
+  fi
+fi
+
+if [[ $psi == 1 ]]; then
+
+  if [[ ! -d /etc/pinecraft/psi/ ]]; then
+    mkdir -p /etc/pinecraft/psi
+  fi
+
+  cp ${base}/assets/psi/* /etc/pinecraft/psi/
+
+  printf '{"pcver":"%s","instdir":"%s","flavor":"%s"}\n' "$pcver" "$instdir" "$flavor" > /etc/pinecraft/psi/psi.json
+
+  chown -R $user:$user /etc/pinecraft/
+fi
+
 ###############################################
 # Create the scripts
 ###############################################
