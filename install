@@ -39,34 +39,45 @@ dialog --infobox "Checking dependencies..." 3 34 && sleep 2
 javaminver=8
 javamaxver=17
 
-# Helper function to validate installed Java version
+# Function to validate installed Java version
 validate_java_version() {
-  local java_cmd=java
+  local java_cmd="java"
 
+  # Check if JAVA_HOME is set and if java is executable
   [[ -n "$JAVA_HOME" && -x "$JAVA_HOME/bin/java" ]] && java_cmd="$JAVA_HOME/bin/java"
-  type $java_cmd >/dev/null 2>&1 || return 1
 
-  local version=$($java_cmd -version 2>&1 | awk -F '"' '/version/ {print $2}')
-  local major_version=$(echo $version | cut -d'.' -f1)
-  [[ $major_version -eq 1 ]] && version=$(echo $version | cut -d'.' -f2)
+  # Get Java version string
+  local version_string=$($java_cmd -version 2>&1 | awk -F '"' '/version/ {print $2}')
+  # Extract the major Java version
+  local major_version=$(echo "$version_string" | awk -F'[._]' '{print $1=="1" ? $2 : $1}')
 
-  if [[ $version -lt $javaminver ]]; then
-    dialog --title "Error" --msgbox "\nJava version $version is installed. Upgrade to at least JRE version $javaminver." 8 50
+  # Compare version and prompt for upgrade if lower than minimum required version
+  if [[ $major_version -lt $javaminver ]]; then
+    dialog --title "Error" --msgbox "\nJava version $version_string is installed. Upgrade to at least JRE version $javaminver." 8 50
     return 1
   fi
+  return 0
 }
 
-# Ensure Java is installed and valid
+# Initialize update flag
+updated=0
+
+# Validate and install Java if necessary
 if ! validate_java_version; then
-  # Attempt to install Java versions from latest to $javaminver
-  for ver in $(seq $javamaxver -1 $javaminver); do
-      [[ $updated -eq 0 ]] && apt-get update >/dev/null 2>&1 && updated=1
+  # Loop through Java versions to install from highest to lowest until successful validation
+  for (( ver=$javamaxver; ver>=$javaminver; ver-- )); do
+      if [[ $updated -eq 0 ]]; then
+          apt-get update >/dev/null 2>&1
+          updated=1
+      fi
       apt-get install -y "openjdk-${ver}-jre-headless" >/dev/null 2>&1
-      validate_java_version && break
+      if validate_java_version; then
+        break
+      fi
   done
 fi
 
-# Confirm Java installation
+# Final Java validation after install attempts
 validate_java_version || exit 1
 
 # Unset git autocrlf setting
