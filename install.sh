@@ -1,7 +1,5 @@
 #!/bin/bash
-
-pcver="3.8"
-eula="accepted"
+pcver="3.9"
 
 if [[ $EUID -ne 0 ]]; then
   echo "ERROR: This script must be run as root" 2>&1
@@ -36,9 +34,6 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Version comparison which allows comparing 1.16.5 to 1.14.0 (for example)
 function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
-
-# Install the web interface
-#psi=1
 
 # Prevent running multiple apt updates
 updated=0
@@ -222,7 +217,7 @@ fi
 
 mcver="1.16.5"
 if (( $ver >= 17 )); then # Java version 17+ allows 1.18.x
-  mcver="1.20.2"
+  mcver="1.20.4"
 elif (( $ver >= 16 )); then # Java version 16+ allows 1.17.x
   mcver="1.17.1"
 fi
@@ -248,7 +243,27 @@ do
   done
 
   exec 3>&1
-  user="samuelbailey";
+  user=$(dialog --title "Linux User" --menu "Linux User to run Minecraft Server:" 20 50 10 "${usersarr[@]}" 2>&1 1>&3);
+
+  case $? in
+  0)
+   if [[ $user == "" ]]; then
+    validuser=""
+   else
+    validuser=$(getent passwd $user)
+   fi
+   if [[ $validuser == "" ]]; then
+     dialog --title "Error" \
+       --msgbox "\n $user does not exist." 6 50
+   fi
+   ;;
+  1)
+   echo
+   echo
+   echo "Aborted."
+   echo
+   exit 1 ;;
+  esac
 
 done
 
@@ -303,7 +318,7 @@ if [[ -e /home/$user ]]; then
 else
   echo "Aborting: $user does not have a homedir."
   exit 1
-fis
+fi
 
 # Get the level seed, but only if this is a new install
 if [[ $upgrade == 0 ]]; then
@@ -312,6 +327,19 @@ if [[ $upgrade == 0 ]]; then
          --menu "Choose your game seed:" 20 50 10 \
          "A"       "Random (Default, ${mcver})" \
          "B"       "Custom (${mcver})" \
+         "C"       "Category5 TV RPi Server (1.16.5)" \
+         "D"       "Jeff's Tutorial World (1.16.5)" \
+         "E"       "Minecraft Title Screen (1.9.4)" \
+         "F"       "Slime Farm (1.16.5)" \
+         "G"       "Obsidian Farm (1.9.4)" \
+         "H"       "Woodland Mansion (1.12.2)" \
+         "I"       "Triple Island Ocean Monument (1.14.4)" \
+         "J"       "Spruce Village and Coral Reef (1.14.4)" \
+         "K"       "Shipwreck Village (1.14.4)" \
+         "L"       "Underwater Temple (1.9.4)" \
+         "M"       "Diamond Paradise (1.9.4)" \
+         "N"       "All Biome World (1.12.2)" \
+         "O"       "Paradise Valley (1.16.5)" \
        2>&1 1>&3);
 
   if [[ $? == 0 ]]; then
@@ -324,6 +352,59 @@ if [[ $upgrade == 0 ]]; then
       seed="custom"
       mcverANY=1
       ;;
+    C)
+      seed="-4385290424787160722"
+      mcver="1.16.5"
+      ;;
+    D)
+      seed="6421417242871949536"
+      mcver="1.16.5"
+      ;;
+    E)
+      seed="2151901553968352745"
+      mcver="1.9.4" # Was actually part of 1.7.3 but that was a beta client, and Spigot only goes back to 1.9. Probably not usable?
+      ;;
+    F)
+      seed="7000"
+      mcver="1.16.5"
+      ;;
+    G)
+      seed="-8880302588844065321"
+      mcver="1.9.4" # Originally on 1.9
+      ;;
+    H)
+      seed="throwlow"
+      mcver="1.12.2" # Originally on 1.12
+      ;;
+    I)
+      seed="6073041046072376055"
+      mcver="1.14.4" # OP didn't say what version, so I have to guess
+      ;;
+    J)
+      seed="673900667"
+      mcver="1.14.4"
+      ;;
+    K)
+      seed="-613756530319979507"
+      mcver="1.14.4"
+      ;;
+    L)
+      seed="-5181140359215069925"
+      mcver="1.9.4" # Was on 1.8 but Spigot only goes back to 1.9
+      ;;
+    M)
+      seed="1785852800490497919"
+      mcver="1.9.4" # Was on 1.8 but Spigot only goes back to 1.9
+      ;;
+    N)
+      seed="1083719637794"
+      mcver="1.12.2"
+      ;;
+    O)
+      seed="4725084288293652062"
+      mcver="1.16.5"
+      ;;
+
     esac
   else
     echo
@@ -344,6 +425,8 @@ fi
 # https://www.minecraft.net/en-us/download/server
 if [[ $mcver == "1.20.2" ]]; then
   vanilla="https://piston-data.mojang.com/v1/objects/5b868151bd02b41319f54c8d4061b8cae84e665c/server.jar"
+elif [[ $mcver == "1.20.4" ]]; then
+    vanilla="https://piston-data.mojang.com/v1/objects/8dd1a28015f51b1803213892b50b7b4fc76e594d/server.jar"
 elif [[ $mcver == "1.20.1" ]]; then
   vanilla="https://piston-data.mojang.com/v1/objects/84194a2f286ef7c14ed7ce0090dba59902951553/server.jar"
 elif [[ $mcver == "1.19.4" ]]; then
@@ -373,7 +456,7 @@ flavor=""
 
 declare -a flavors=()
 
-if [[ $mcverANY == "1" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.17" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]]; then
+if [[ $mcverANY == "1" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.17" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]] || [[ $mcver == "1.20.4" ]]; then
   flavors+=("P" "Paper (Default, ${mcver})")
 fi
 
@@ -396,7 +479,7 @@ if [[ $mcverANY == "1" ]] || [[ $mcver == "1.12.2" ]]; then
   flavors+=("C" "Cuberite (1.12)")
 fi
 
-if [[ $mcverANY == "1" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.17" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]]; then
+if [[ $mcverANY == "1" ]] || [[ $mcver == "1.17.1" ]] || [[ $mcver == "1.17" ]] || [[ $mcver == "1.16.5" ]] || [[ $mcver == "1.18" ]] || [[ $mcver == "1.18.1" ]] || [[ $mcver == "1.18.2" ]] || [[ $mcver == "1.19" ]] || [[ $mcver == "1.19.2" ]] || [[ $mcver == "1.19.3" ]] || [[ $mcver == "1.19.4" ]] || [[ $mcver == "1.20.1" ]] || [[ $mcver == "1.20.2" ]] || [[ $mcver == "1.20.4" ]]; then
   flavors+=("V" "Vanilla (${mcver})")
 fi
 
@@ -534,6 +617,21 @@ else
   exit 1
 fi
 
+dialog --title "End-User License Agreement"  --yesno "In order to proceed, you must read and accept the EULA at https://account.mojang.com/documents/minecraft_eula\n\nDo you accept the EULA?" 8 60
+
+  case $? in
+  0)
+   eula="accepted"
+   eula_stamp=$(date)
+   ;;
+  1)
+   echo
+   echo
+   echo "EULA not accepted. You are not permitted to install this software."
+   echo
+   exit 1 ;;
+  esac
+
 # Gather some info about your system which will be used to determine the config
 revision=$(cat /proc/cpuinfo | grep 'Revision' | awk '{print $3}')
 if [[ $revision == "" ]]; then
@@ -596,6 +694,7 @@ elif [[ "$revision" == *"VIM4" ]]; then
   board='Khadas VIM4'
   boardnum=3
   oc_friendly="Not Required"
+
 fi
 
 if (( $gamemem > 3800 )); then
@@ -812,6 +911,29 @@ else
   fi
 fi
 
+if [[ $psi == 1 ]]; then
+
+  # PHP interpreter / server for Pinecraft configuration interface
+  if [ $(dpkg-query -W -f='${Status}' php 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+    dialog --infobox "Installing PHP..." 3 34 ;
+    if [[ $updated == 0 ]]; then
+      apt-get update > /dev/null 2>&1
+      updated=1
+    fi
+    apt-get -y install php-cli > /dev/null 2>&1
+  fi
+
+  if [[ ! -d /etc/pinecraft/psi/ ]]; then
+    mkdir -p /etc/pinecraft/psi
+  fi
+
+  cp ${base}/assets/psi/* /etc/pinecraft/psi/
+
+  printf '{"pcver":"%s","instdir":"%s","flavor":"%s"}\n' "$pcver" "$instdir" "$flavor" > /etc/pinecraft/psi/psi.json
+
+  chown -R $user:$user /etc/pinecraft/
+fi
+
 ###############################################
 # Patch Minecraft against exploit within Log4j
 # See https://www.minecraft.net/en-us/article/important-message--security-vulnerability-java-edition?ref=launcher
@@ -994,6 +1116,39 @@ ln -s ${instdir}stop /etc/rc6.d/K01stop-pinecraft
 ###############################################
 
 ###############################################
+# Overclock
+###############################################
+
+if [[ ! $oc_volt == 0 ]]; then
+  dialog --infobox "Overclocking your system..." 3 34 ; sleep 1
+  datestamp=$(date +"%Y-%m-%d_%H-%M-%S")
+
+  cp $configfile /boot/config-${datestamp}.txt
+
+  # Replace existing overclock settings or add new ones if none exist
+
+  /bin/sed -i -- "/over_voltage=/c\over_voltage=${oc_volt}" $configfile
+  if ! grep -q "over_voltage=" $configfile; then
+    echo "over_voltage=$oc_volt" >> $configfile
+  fi
+
+  /bin/sed -i -- "/arm_freq=/c\arm_freq=${oc_freq}" $configfile
+  if ! grep -q "arm_freq=" $configfile; then
+    echo "arm_freq=${oc_freq}" >> $configfile
+  fi
+
+  /bin/sed -i -- "/dtparam=audio=/c\dtparam=audio=off" $configfile
+  if ! grep -q "dtparam=audio=" $configfile; then
+    echo "dtparam=audio=" >> $configfile
+  fi
+
+fi
+
+###############################################
+# /Overclock
+###############################################
+
+###############################################
 # Tweak Server Configs
 ###############################################
 
@@ -1133,7 +1288,6 @@ else
 fi
 
 clear
-  echo
   echo
   echo "Installation complete."
   echo
